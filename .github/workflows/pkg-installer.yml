@@ -60,11 +60,19 @@ jobs:
           security set-keychain-settings -l -u -t 21600 "${TEMPORARY_KEYCHAIN_PATH}"
           security unlock-keychain -p "${TEMPORARY_KEYCHAIN_PASSWORD}" "${TEMPORARY_KEYCHAIN_PATH}"
 
-      - name: Create temporary certificate file
+      - name: Create and validate temporary certificate file
         env:
           PKG_APPLE_SIGNING_CERTIFICATE_BASE64: ${{ secrets.PKG_APPLE_SIGNING_CERTIFICATE_BASE64 }}
-        run: echo -n "${PKG_APPLE_SIGNING_CERTIFICATE_BASE64}" |
-             base64 --decode --output="${RUNNER_TEMP}/${TEMPORARY_CERTIFICATE_FILE}"
+        run: |
+          echo -n "${PKG_APPLE_SIGNING_CERTIFICATE_BASE64}" |
+               base64 --decode --output="${RUNNER_TEMP}/${TEMPORARY_CERTIFICATE_FILE}"
+          # Verify the file was created and has content
+          if [[ ! -s "${RUNNER_TEMP}/${TEMPORARY_CERTIFICATE_FILE}" ]]; then
+            echo "ERROR: Certificate file is empty or missing"
+            exit 1
+          fi
+          # Check file size and format
+          file "${RUNNER_TEMP}/${TEMPORARY_CERTIFICATE_FILE}"
 
       - name: Import certificate file into macOS keychain
         env:
